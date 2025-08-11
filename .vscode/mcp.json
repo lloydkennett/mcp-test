@@ -1,0 +1,22 @@
+{
+	"servers": {
+		"devtools": {
+			"type": "stdio",
+			"command": "/home/xanq/mcp-test/app/server",
+			"args": []
+		},
+		"git": {
+			"command": "docker",
+			"args": [
+				"run",
+				"--rm",
+				"-i",
+				"--mount",
+				"type=bind,src=${workspaceFolder},dst=/workspace",
+				"mcp/git"
+			],
+			"type": "stdio"
+		},
+	},
+	"inputs": []
+}

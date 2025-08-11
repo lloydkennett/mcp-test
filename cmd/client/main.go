@@ -11,21 +11,18 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// Create a new client, with no features.
 	client := mcp.NewClient(&mcp.Implementation{Name: "mcp-client", Version: "v1.0.0"}, nil)
 
-	// Connect to a server over stdin/stdout
-	transport := mcp.NewCommandTransport(exec.Command("myserver"))
+	transport := mcp.NewCommandTransport(exec.Command("/home/xanq/mcp-test/app/server"))
 	session, err := client.Connect(ctx, transport)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer session.Close()
 
-	// Call a tool on the server.
 	params := &mcp.CallToolParams{
-		Name:      "greet",
-		Arguments: map[string]any{"name": "you"},
+		Name:      "style-guide",
+		Arguments: map[string]any{"language": "go"},
 	}
 	res, err := session.CallTool(ctx, params)
 	if err != nil {

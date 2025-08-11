@@ -2,103 +2,147 @@ package main
 
 import (
 	"context"
-	"io"
+	"encoding/json"
+	"fmt"
 	"log"
-	"net/http"
-	"strings"
+	"log/slog"
+	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-type StyleGuideParams struct {
-	Language string `json:"language" jsonschema:"the programming language (go, java, javascript, python)"`
-	Topic    string `json:"topic" jsonschema:"the coding standard topic to get information about"`
+const (
+	defaultJiraBaseURL = "https://your-domain.atlassian.net"
+	defaultJiraUser    = "your-email@example.com"
+	defaultJiraToken   = "your-api-token"
+)
+
+type JiraStatusRequest struct {
+	TicketID string `json:"ticketId"`
+	Status   string `json:"status"`
 }
 
-var styleGuideURLs = map[string]string{
-	"go":         "https://google.github.io/styleguide/go/",
-	"java":       "https://google.github.io/styleguide/javaguide.html",
-	"javascript": "https://google.github.io/styleguide/jsguide.html",
-	"python":     "https://google.github.io/styleguide/pyguide.html",
+type JiraCommentRequest struct {
+	TicketID string `json:"ticketId"`
+	Comment  string `json:"comment"`
 }
 
-var styleTopics = map[string][]string{
-	"naming":     {"Naming", "Names", "Identifiers"},
-	"formatting": {"Formatting", "Style", "Layout", "Source file"},
-	"comments":   {"Documentation", "Comments", "Javadoc", "Docstrings"},
-	"imports":    {"Imports", "Packages", "Package imports", "Module"},
-	"practices":  {"Best Practices", "Guidelines", "Programming Practices", "Conventions"},
+type JiraResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
 }
 
-func extractAllSections(content string) string {
-	lower := strings.ToLower(content)
-	var foundSections []string
+type StyleGuideRequest struct {
+	Language string `json:"language"`
+}
 
-	for topic, searchTerms := range styleTopics {
-		for _, term := range searchTerms {
-			termLower := strings.ToLower(term)
-			start := strings.Index(lower, termLower)
-			if start == -1 {
-				continue
-			}
+type StyleGuideResponse struct {
+	Success bool   `json:"success"`
+	Content string `json:"content"`
+	Message string `json:"message"`
+}
 
-			end := len(content)
-			nextSection := strings.Index(lower[start+len(term):], "<h")
-			if nextSection != -1 {
-				end = start + len(term) + nextSection
-			}
+var (
+	jiraClient  *JiraClient
+	styleClient *StyleClient
+)
 
-			section := content[start:end]
-			section = strings.ReplaceAll(section, "<br>", "\n")
-			section = strings.ReplaceAll(section, "</p>", "\n")
-			section = strings.ReplaceAll(section, "</li>", "\n")
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
-			foundSections = append(foundSections, "=== "+topic+": "+term+" ===\n"+section+"\n\n")
-		}
+func setJiraStatus(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[JiraStatusRequest]) (*mcp.CallToolResultFor[JiraResponse], error) {
+	ticketID := params.Arguments.TicketID
+	desiredStatus := params.Arguments.Status
+
+	if err := jiraClient.SetTicketStatus(ctx, ticketID, desiredStatus); err != nil {
+		return nil, fmt.Errorf("failed to set Jira status: %w", err)
 	}
 
-	return strings.Join(foundSections, "---\n")
-}
-
-func GetStyleGuide(ctx context.Context, cc *mcp.ServerSession, params *mcp.CallToolParamsFor[StyleGuideParams]) (*mcp.CallToolResultFor[any], error) {
-	language := strings.ToLower(params.Arguments.Language)
-
-	url, ok := styleGuideURLs[language]
-	if !ok {
-		return &mcp.CallToolResultFor[any]{
-			Content: []mcp.Content{&mcp.TextContent{Text: "Available languages: go, java, javascript, python"}},
-		}, nil
+	response := JiraResponse{
+		Success: true,
+		Message: fmt.Sprintf("Successfully moved ticket %s to %s", ticketID, desiredStatus),
 	}
 
-	resp, err := http.Get(url)
+	jsonResponse, _ := json.Marshal(response)
+	return &mcp.CallToolResultFor[JiraResponse]{
+		Content: []mcp.Content{&mcp.TextContent{Text: string(jsonResponse)}},
+		IsError: false,
+	}, nil
+}
+
+func addJiraComment(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[JiraCommentRequest]) (*mcp.CallToolResultFor[JiraResponse], error) {
+	ticketID := params.Arguments.TicketID
+	comment := params.Arguments.Comment
+
+	if err := jiraClient.AddComment(ctx, ticketID, comment); err != nil {
+		return nil, fmt.Errorf("failed to add Jira comment: %w", err)
+	}
+
+	response := JiraResponse{
+		Success: true,
+		Message: fmt.Sprintf("Successfully added comment to ticket %s", ticketID),
+	}
+
+	jsonResponse, _ := json.Marshal(response)
+	return &mcp.CallToolResultFor[JiraResponse]{
+		Content: []mcp.Content{&mcp.TextContent{Text: string(jsonResponse)}},
+		IsError: false,
+	}, nil
+}
+
+func getStyleGuide(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[StyleGuideRequest]) (*mcp.CallToolResultFor[StyleGuideResponse], error) {
+	language := params.Arguments.Language
+
+	guide, err := styleClient.GetStyleGuide(ctx, language)
 	if err != nil {
-		return &mcp.CallToolResultFor[any]{
-			Content: []mcp.Content{&mcp.TextContent{Text: "Error fetching style guide: " + err.Error()}},
-		}, nil
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return &mcp.CallToolResultFor[any]{
-			Content: []mcp.Content{&mcp.TextContent{Text: "Error reading response: " + err.Error()}},
-		}, nil
+		return nil, fmt.Errorf("failed to get style guide: %w", err)
 	}
 
-	//content := extractAllSections(string(body))
-	return &mcp.CallToolResultFor[any]{
-		// Content: []mcp.Content{&mcp.TextContent{Text: content}},
-		Content: []mcp.Content{&mcp.TextContent{Text: string(body)}},
+	response := StyleGuideResponse{
+		Success: true,
+		Content: fmt.Sprint(guide),
+		Message: fmt.Sprintf("Retrieved %s style guide", language),
+	}
+
+	jsonResponse, _ := json.Marshal(response)
+	slog.Info(string(jsonResponse))
+	return &mcp.CallToolResultFor[StyleGuideResponse]{
+		Content: []mcp.Content{&mcp.TextContent{Text: string(jsonResponse)}},
+		IsError: false,
 	}, nil
 }
 
 func main() {
-	server := mcp.NewServer(&mcp.Implementation{Name: "style-guides", Version: "v1.0.0"}, nil)
+	jiraBaseURL := getEnvOrDefault("JIRA_BASE_URL", defaultJiraBaseURL)
+	jiraUser := getEnvOrDefault("JIRA_USER", defaultJiraUser)
+	jiraToken := getEnvOrDefault("JIRA_TOKEN", defaultJiraToken)
+
+	jiraClient = NewJiraClient(jiraBaseURL, jiraUser, jiraToken)
+	styleClient = NewStyleClient()
+
+	server := mcp.NewServer(&mcp.Implementation{
+		Name:    "devtools",
+		Version: "v1.0.0",
+	}, nil)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "set-status",
+		Description: "Set a Jira ticket to a given status (e.g., In Progress, Done, To Do)",
+	}, setJiraStatus)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "add-comment",
+		Description: "Add a comment to a Jira ticket",
+	}, addJiraComment)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "style-guide",
 		Description: "Get Google's Style Guide information for different programming languages",
-	}, GetStyleGuide)
+	}, getStyleGuide)
 
 	if err := server.Run(context.Background(), mcp.NewStdioTransport()); err != nil {
 		log.Fatal(err)
