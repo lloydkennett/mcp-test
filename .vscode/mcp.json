@@ -3,7 +3,18 @@
 		"devtools": {
 			"type": "stdio",
 			"command": "/home/xanq/mcp-test/app/server",
-			"args": []
+			// "args": [
+			// 	"run",
+			// 	"/home/xanq/mcp-test/cmd/server"
+			// ]
+		},
+		"context7": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@upstash/context7-mcp"
+			]
 		},
 		"git": {
 			"command": "docker",

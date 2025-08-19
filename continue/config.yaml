@@ -1,0 +1,37 @@
+name: Local Assistant
+version: 1.0.0
+schema: v1
+models:
+  - name: ollama
+    provider: ollama
+    apiBase: http://localhost:11434
+    model: qwen3:8b
+    roles:
+      - chat
+      - edit
+      - apply
+  - name: llama.cpp
+    provider: llama.cpp
+    model: bartowski/Qwen_Qwen3-8B-GGUF
+    apiBase: http://localhost:8080/
+    defaultCompletionOptions:
+      contextLength: 40000
+      maxTokens: 30000
+    capabilities:
+      - tool_use
+    roles:
+      - chat
+      - edit
+      - apply
+mcpServers:
+  - name: devtools
+    type: stdio
+    command: /home/xanq/mcp-test/app/server
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: folder
+  - provider: codebase
