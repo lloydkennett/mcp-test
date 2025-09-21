@@ -1,0 +1,44 @@
+{
+  "name": "Go Dev Container (Docker Hub)",
+  "image": "golang:1.25-bookworm",
+  // If you need Docker inside the container later, switch back to a devcontainers base or create a Dockerfile adding it.
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // Standard Go settings
+        "go.useLanguageServer": true,
+        "go.formatTool": "gofmt",
+        "go.lintTool": "staticcheck",
+        "go.testFlags": [
+          "-v"
+        ],
+        "editor.formatOnSave": true,
+        // Correct location for MCP server definitions:
+        // The VS Code setting key should be `mcp.servers` (NOT nested under another `vscode` object)
+        "mcp.servers": {
+          "terraform": {
+            "command": "docker",
+            "args": [
+              "run",
+              "-i",
+              "--rm",
+              // NOTE: This requires the Docker CLI + daemon/socket to be available inside the dev container
+              "hashicorp/terraform-mcp-server"
+            ]
+          }
+        }
+      },
+      "extensions": [
+        "golang.go",
+        "github.copilot",
+        // Copilot Chat often surfaces MCP integrations sooner; optional but recommended
+        "github.copilot-chat",
+        // Helpful for confirming Docker availability if you rely on `docker run`
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "postCreateCommand": "go mod download"
+  // Official golang image runs as root by default; for a non-root user uncomment below Dockerfile approach later.
+  // "remoteUser": "vscode"
+}

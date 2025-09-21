@@ -1,0 +1,40 @@
+version: "2"
+
+run:
+  timeout: 2m
+  allow-parallel-runners: true
+
+linters:
+  enable:
+    # Core
+    - govet
+    - staticcheck
+    #- gosimple
+    - errcheck
+    - ineffassign
+    - unused
+    # Selected extras (low-noise)
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
+    - errorlint
+    - goconst
+    - gocritic
+    - gosec
+    - misspell
+    - nakedret
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
+    - wrapcheck
+  disable:
+    - dupl
+    - funlen
+    - gocyclo
+    - lll
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

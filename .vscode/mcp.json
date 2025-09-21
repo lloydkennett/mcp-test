@@ -1,0 +1,29 @@
+{
+	"servers": {
+		"terraform": {
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"hashicorp/terraform-mcp-server"
+			],
+			"type": "stdio"
+		},
+		"devtools-mcp": {
+			"type": "stdio",
+			"command": "go",
+			"args": [
+				"run",
+				"/home/xanq/mcp-test/cmd/server"
+			],
+			"env": {
+				"GITLAB_TOKEN": "token",
+				"SONARQUBE_TOKEN": "token",
+				"CONFLUENCE_TOKEN": "token",
+				//"JIRA_TOKEN": "token"
+			}
+		}
+	},
+	"inputs": []
+}
