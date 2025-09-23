@@ -14,6 +14,13 @@ type HotspotsInput struct {
 	ProjectKey string `json:"project_key" jsonschema:"Project key"`
 }
 
+func (in HotspotsInput) Validate() error {
+	if in.ProjectKey == "" {
+		return errors.New("project_key is required")
+	}
+	return nil
+}
+
 type Hotspot struct {
 	Key                      string `json:"key" jsonschema:"Hotspot key"`
 	Component                string `json:"component" jsonschema:"Component (file path)"`
@@ -39,8 +46,8 @@ func hotspotsTool() *mcp.Tool {
 }
 
 func (s *SonarQube) hotspots(ctx context.Context, _ *mcp.CallToolRequest, in HotspotsInput) (*mcp.CallToolResult, HotspotsOutput, error) {
-	if in.ProjectKey == "" {
-		return nil, HotspotsOutput{}, errors.New("project_key is required")
+	if err := in.Validate(); err != nil {
+		return nil, HotspotsOutput{}, err
 	}
 	q := url.Values{}
 	q.Set("projectKey", in.ProjectKey)

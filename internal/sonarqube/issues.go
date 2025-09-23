@@ -16,6 +16,13 @@ type IssuesInput struct {
 	Severities string `json:"severities,omitempty" jsonschema:"Severities CSV: BLOCKER,CRITICAL,MAJOR,MINOR,INFO"`
 }
 
+func (in IssuesInput) Validate() error {
+	if in.ProjectKey == "" {
+		return errors.New("project_key is required")
+	}
+	return nil
+}
+
 type Issue struct {
 	Key       string `json:"key" jsonschema:"Issue key"`
 	Rule      string `json:"rule" jsonschema:"Rule key"`
@@ -40,8 +47,8 @@ func issuesTool() *mcp.Tool {
 }
 
 func (s *SonarQube) issues(ctx context.Context, _ *mcp.CallToolRequest, in IssuesInput) (*mcp.CallToolResult, IssuesOutput, error) {
-	if in.ProjectKey == "" {
-		return nil, IssuesOutput{}, errors.New("project_key is required")
+	if err := in.Validate(); err != nil {
+		return nil, IssuesOutput{}, err
 	}
 	q := url.Values{}
 	q.Set("componentKeys", in.ProjectKey)

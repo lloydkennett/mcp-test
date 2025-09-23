@@ -15,6 +15,13 @@ type ProjectDetailsInput struct {
 	ProjectID string `json:"project_id" jsonschema:"Project ID (numeric) or URL-encoded path"`
 }
 
+func (in ProjectDetailsInput) Validate() error {
+	if in.ProjectID == "" {
+		return errors.New("project_id is required")
+	}
+	return nil
+}
+
 type ProjectDetailsOutput struct {
 	ID            int    `json:"id" jsonschema:"Project ID"`
 	PathWithNS    string `json:"path_with_namespace" jsonschema:"Full path with namespace"`
@@ -31,8 +38,8 @@ func projectDetailsTool() *mcp.Tool {
 }
 
 func (g *GitLab) projectDetails(ctx context.Context, _ *mcp.CallToolRequest, in ProjectDetailsInput) (*mcp.CallToolResult, ProjectDetailsOutput, error) {
-	if in.ProjectID == "" {
-		return nil, ProjectDetailsOutput{}, errors.New("project_id is required")
+	if err := in.Validate(); err != nil {
+		return nil, ProjectDetailsOutput{}, err
 	}
 	escapedID := url.PathEscape(in.ProjectID)
 	path := fmt.Sprintf("/api/v4/projects/%s", escapedID)

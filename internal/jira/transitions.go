@@ -14,6 +14,13 @@ type IssueTransitionsInput struct {
 	IssueKey string `json:"issue_key" jsonschema:"Issue key, e.g. PROJ-123"`
 }
 
+func (in IssueTransitionsInput) Validate() error {
+	if in.IssueKey == "" {
+		return errors.New("issue_key is required")
+	}
+	return nil
+}
+
 type IssueTransition struct {
 	ID   string `json:"id" jsonschema:"Transition ID"`
 	Name string `json:"name" jsonschema:"Transition name"`
@@ -34,8 +41,8 @@ func issueTransitionsTool() *mcp.Tool {
 }
 
 func (j *Jira) issueTransitions(ctx context.Context, _ *mcp.CallToolRequest, in IssueTransitionsInput) (*mcp.CallToolResult, IssueTransitionsOutput, error) {
-	if in.IssueKey == "" {
-		return nil, IssueTransitionsOutput{}, errors.New("issue_key is required")
+	if err := in.Validate(); err != nil {
+		return nil, IssueTransitionsOutput{}, err
 	}
 	path := fmt.Sprintf("/rest/api/2/issue/%s/transitions", in.IssueKey)
 	var out IssueTransitionsOutput

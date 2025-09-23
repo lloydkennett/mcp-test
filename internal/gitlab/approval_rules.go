@@ -15,6 +15,13 @@ type ApprovalRulesInput struct {
 	ProjectID string `json:"project_id" jsonschema:"Project ID (numeric) or URL-encoded path"`
 }
 
+func (in ApprovalRulesInput) Validate() error {
+	if in.ProjectID == "" {
+		return errors.New("project_id is required")
+	}
+	return nil
+}
+
 type ApprovalRule struct {
 	ID                int    `json:"id" jsonschema:"Rule ID"`
 	Name              string `json:"name" jsonschema:"Name"`
@@ -39,8 +46,8 @@ func approvalRulesTool() *mcp.Tool {
 }
 
 func (g *GitLab) approvalRules(ctx context.Context, _ *mcp.CallToolRequest, in ApprovalRulesInput) (*mcp.CallToolResult, ApprovalRulesOutput, error) {
-	if in.ProjectID == "" {
-		return nil, ApprovalRulesOutput{}, errors.New("project_id is required")
+	if err := in.Validate(); err != nil {
+		return nil, ApprovalRulesOutput{}, err
 	}
 	escapedID := url.PathEscape(in.ProjectID)
 	url := fmt.Sprintf("/api/v4/projects/%s/approval_rules", escapedID)

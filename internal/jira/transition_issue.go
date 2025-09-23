@@ -16,6 +16,16 @@ type TransitionIssueInput struct {
 	Comment      string `json:"comment,omitempty" jsonschema:"Optional comment to add during transition"`
 }
 
+func (in TransitionIssueInput) Validate() error {
+	switch {
+	case in.IssueKey == "":
+		return errors.New("issue_key is required")
+	case in.TransitionID == "":
+		return errors.New("transition_id is required")
+	}
+	return nil
+}
+
 type TransitionIssueOutput struct {
 	Key          string `json:"key" jsonschema:"Issue key"`
 	TransitionID string `json:"transition_id" jsonschema:"Applied transition ID"`
@@ -29,11 +39,8 @@ func transitionIssueTool() *mcp.Tool {
 }
 
 func (j *Jira) transitionIssue(ctx context.Context, _ *mcp.CallToolRequest, in TransitionIssueInput) (*mcp.CallToolResult, TransitionIssueOutput, error) {
-	if in.IssueKey == "" {
-		return nil, TransitionIssueOutput{}, errors.New("issue_key is required")
-	}
-	if in.TransitionID == "" {
-		return nil, TransitionIssueOutput{}, errors.New("transition_id is required")
+	if err := in.Validate(); err != nil {
+		return nil, TransitionIssueOutput{}, err
 	}
 
 	path := fmt.Sprintf("/rest/api/2/issue/%s/transitions", in.IssueKey)

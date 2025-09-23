@@ -21,6 +21,20 @@ type CreateMergeRequestInput struct {
 	RemoveSource bool   `json:"remove_source_branch,omitempty" jsonschema:"Remove source branch on merge (optional)"`
 }
 
+func (in CreateMergeRequestInput) Validate() error {
+	switch {
+	case in.ProjectID == "":
+		return errors.New("project_id is required")
+	case in.SourceBranch == "":
+		return errors.New("source_branch is required")
+	case in.TargetBranch == "":
+		return errors.New("target_branch is required")
+	case in.Title == "":
+		return errors.New("title is required")
+	}
+	return nil
+}
+
 type CreateMergeRequestOutput struct {
 	IID          int    `json:"iid" jsonschema:"Merge request IID"`
 	ID           int    `json:"id" jsonschema:"Merge request ID"`
@@ -39,17 +53,8 @@ func createMergeRequestTool() *mcp.Tool {
 }
 
 func (g *GitLab) createMergeRequest(ctx context.Context, _ *mcp.CallToolRequest, in CreateMergeRequestInput) (*mcp.CallToolResult, CreateMergeRequestOutput, error) {
-	if in.ProjectID == "" {
-		return nil, CreateMergeRequestOutput{}, errors.New("project_id is required")
-	}
-	if in.SourceBranch == "" {
-		return nil, CreateMergeRequestOutput{}, errors.New("source_branch is required")
-	}
-	if in.TargetBranch == "" {
-		return nil, CreateMergeRequestOutput{}, errors.New("target_branch is required")
-	}
-	if in.Title == "" {
-		return nil, CreateMergeRequestOutput{}, errors.New("title is required")
+	if err := in.Validate(); err != nil {
+		return nil, CreateMergeRequestOutput{}, err
 	}
 
 	escapedID := url.PathEscape(in.ProjectID)

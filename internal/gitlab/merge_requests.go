@@ -16,6 +16,13 @@ type MergeRequestsInput struct {
 	State     string `json:"state,omitempty" jsonschema:"State: opened|closed|locked|merged (default opened)"`
 }
 
+func (in MergeRequestsInput) Validate() error {
+	if in.ProjectID == "" {
+		return errors.New("project_id is required")
+	}
+	return nil
+}
+
 type MergeRequestsOutputItem struct {
 	IID    int    `json:"iid" jsonschema:"Merge request IID"`
 	Title  string `json:"title" jsonschema:"Title"`
@@ -40,8 +47,8 @@ func mergeRequestsTool() *mcp.Tool {
 }
 
 func (g *GitLab) mergeRequests(ctx context.Context, _ *mcp.CallToolRequest, in MergeRequestsInput) (*mcp.CallToolResult, MergeRequestsOutput, error) {
-	if in.ProjectID == "" {
-		return nil, MergeRequestsOutput{}, errors.New("project_id is required")
+	if err := in.Validate(); err != nil {
+		return nil, MergeRequestsOutput{}, err
 	}
 	escapedID := url.PathEscape(in.ProjectID)
 	state := in.State
