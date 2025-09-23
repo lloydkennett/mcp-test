@@ -12,6 +12,7 @@ import (
 	"github.com/lloydkennett/mcp-test/internal/confluence"
 	"github.com/lloydkennett/mcp-test/internal/gitlab"
 	"github.com/lloydkennett/mcp-test/internal/jira"
+	"github.com/lloydkennett/mcp-test/internal/prompts"
 	"github.com/lloydkennett/mcp-test/internal/registry"
 	"github.com/lloydkennett/mcp-test/internal/sonarqube"
 
@@ -30,6 +31,8 @@ func main() {
 	defer stop()
 
 	server := mcp.NewServer(&mcp.Implementation{Name: "devtools", Version: Version}, nil)
+
+	prompts.Register(server)
 
 	var reg registry.Registry
 
