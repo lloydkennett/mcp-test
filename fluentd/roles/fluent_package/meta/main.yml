@@ -1,0 +1,35 @@
+---
+# Metadata for fluent_package role
+galaxy_info:
+  author: "Ansible Role Author"
+  description: "Install fluent-package (Fluentd LTS) on RedHat-based systems"
+  company: "Your Organization"
+  license: "MIT"
+  min_ansible_version: "2.9"
+
+  platforms:
+    - name: EL
+      versions:
+        - "8"
+        - "9"
+    - name: CentOS
+      versions:
+        - "8"
+        - "9"
+    - name: AlmaLinux
+      versions:
+        - "8"
+        - "9"
+    - name: Rocky
+      versions:
+        - "8"
+        - "9"
+
+  galaxy_tags:
+    - logging
+    - fluentd
+    - fluent-package
+    - redhat
+    - package-management
+
+dependencies: []

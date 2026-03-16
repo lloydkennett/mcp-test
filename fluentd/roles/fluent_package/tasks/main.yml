@@ -1,0 +1,114 @@
+---
+- name: fluent_package | Gather OS facts
+  setup:
+    gather_subset:
+      - distribution
+      - hardware
+  when: ansible_distribution is not defined
+
+- name: fluent_package | Verify RedHat-based system
+  assert:
+    that:
+      - ansible_os_family == "RedHat"
+    fail_msg: "This role only supports RedHat-based systems (CentOS, RHEL, etc.)"
+
+- name: fluent_package | Get system architecture
+  set_fact:
+    fluent_arch: "{{ ansible_architecture }}"
+
+- name: fluent_package | Determine RedHat major version
+  set_fact:
+    fluent_el_version: "{{ ansible_distribution_major_version }}"
+
+- name: fluent_package | Verify prerequisites
+  command: "which {{ item }}"
+  changed_when: false
+  loop:
+    - curl
+    - rpm
+    - yum
+  register: prerequisite_check
+  failed_when: prerequisite_check.rc != 0
+  ignore_errors: true
+
+- name: fluent_package | Build fluent-release RPM URL
+  set_fact:
+    fluent_release_rpm_url: >-
+      https://fluentd.cdn.cncf.io/lts/
+      {{ fluent_package_lts_version }}/redhat/
+      {{ fluent_el_version }}/
+      {{ fluent_arch }}/
+      fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm
+  vars:
+    fluent_release_rpm_url_clean: |
+      https://fluentd.cdn.cncf.io/lts/{{ fluent_package_lts_version }}/redhat/{{ fluent_el_version }}/{{ fluent_arch }}/fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm
+
+- name: fluent_package | Set clean URL (without line breaks)
+  set_fact:
+    fluent_release_rpm_url: "https://fluentd.cdn.cncf.io/lts/{{ fluent_package_lts_version }}/redhat/{{ fluent_el_version }}/{{ fluent_arch }}/fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm"
+
+- name: fluent_package | Check if existing repo file exists
+  stat:
+    path: /etc/yum.repos.d/fluent-package-lts.repo
+  register: existing_repo_file
+
+- name: fluent_package | Verify if existing repo is RPM-managed
+  shell: rpm -qf /etc/yum.repos.d/fluent-package-lts.repo
+  changed_when: false
+  failed_when: false
+  register: repo_rpm_check
+  when: existing_repo_file.stat.exists
+
+- name: fluent_package | Backup unmanaged repo file
+  copy:
+    src: /etc/yum.repos.d/fluent-package-lts.repo
+    dest: /etc/yum.repos.d/fluent-package-lts.repo.rpmsave
+    remote_src: yes
+    backup: yes
+  when:
+    - existing_repo_file.stat.exists
+    - repo_rpm_check.rc != 0
+  become: yes
+
+- name: fluent_package | Download fluent-release RPM
+  get_url:
+    url: "{{ fluent_release_rpm_url }}"
+    dest: "/tmp/fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm"
+    timeout: 30
+  register: fluent_rpm_download
+  become: yes
+
+- name: fluent_package | Install fluent-release RPM
+  yum:
+    name: "/tmp/fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm"
+    state: present
+  become: yes
+  register: fluent_release_install
+
+- name: fluent_package | Remove downloaded release RPM
+  file:
+    path: "/tmp/fluent-lts-release-{{ fluent_package_release_version }}.el{{ fluent_el_version }}.noarch.rpm"
+    state: absent
+  become: yes
+
+- name: fluent_package | Update yum cache
+  yum:
+    name: "*"
+    state: latest
+    update_cache: yes
+    update_only: yes
+  become: yes
+  changed_when: false
+  failed_when: false
+
+- name: fluent_package | Install fluent-package
+  yum:
+    name: fluent-package
+    state: present
+  become: yes
+  register: fluent_package_install
+
+- name: fluent_package | Display installation status
+  debug:
+    msg: "fluent-package installation completed successfully"
+  when: fluent_package_install.changed

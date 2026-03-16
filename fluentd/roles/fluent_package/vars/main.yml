@@ -1,0 +1,22 @@
+---
+# fluent_package role variables
+
+# Supported RedHat-based distributions
+fluent_supported_distributions:
+  - RedHat
+  - CentOS
+  - Fedora
+  - AlmaLinux
+  - Rocky
+
+# Supported major versions
+fluent_supported_versions:
+  - "8"
+  - "9"
+
+# Repository file location
+fluent_repo_file: /etc/yum.repos.d/fluent-package-lts.repo
+fluent_repo_backup: /etc/yum.repos.d/fluent-package-lts.repo.rpmsave
+
+# Temporary download directory
+fluent_temp_dir: "/tmp"

@@ -1,0 +1,46 @@
+---
+# Example playbook using the fluent_package role
+
+- name: Install fluent-package on RedHat systems
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Display system information
+      debug:
+        msg: >
+          Installing fluent-package on {{ ansible_distribution }}
+          {{ ansible_distribution_version }} ({{ ansible_architecture }})
+
+    - name: Include fluent_package role
+      include_role:
+        name: fluent_package
+
+    - name: Verify fluent-package installation
+      command: fluent-package --version
+      changed_when: false
+      register: fluent_version
+
+    - name: Display fluent-package version
+      debug:
+        msg: "fluent-package version: {{ fluent_version.stdout }}"
+
+# Alternative: Using role as a play role
+#
+# - name: Setup logging with fluent-package
+#   hosts: webservers
+#   become: yes
+#   roles:
+#     - role: fluent_package
+#       vars:
+#         fluent_package_lts_version: "6"
+#         fluent_package_debug: true
+#
+#   post_tasks:
+#     - name: Start fluent service
+#       systemd:
+#         name: fluent
+#         state: started
+#         enabled: yes
+#       when: ansible_service_mgr == 'systemd'

@@ -1,0 +1,20 @@
+---
+# fluent_package role defaults
+
+# LTS version of fluent-package to install
+fluent_package_lts_version: "6"
+
+# Release version of fluent-lts-release RPM
+fluent_package_release_version: "2025.9.29-1"
+
+# CDN base URL for fluent releases
+fluent_package_cdn_url: "https://fluentd.cdn.cncf.io"
+
+# Whether to backup existing unmanaged repo files
+fluent_package_backup_existing_repo: true
+
+# Download timeout in seconds
+fluent_package_download_timeout: 30
+
+# Enable debug output
+fluent_package_debug: false
